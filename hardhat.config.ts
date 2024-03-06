@@ -9,7 +9,7 @@ const config: HardhatUserConfig = {
     local: {
       url: "http://localhost:8545",
     },
-    sepolia: {
+    env: {
       url: process.env.NETWORK_URL,
       accounts: [process.env.PRIVATE_KEY as string],
     },
