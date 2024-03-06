@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { ENSRegistry, MyTLD } from "../typechain-types";
+import { ENSRegistry, CustomTLD } from "../typechain-types";
 import { expect } from "chai";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -9,7 +9,7 @@ describe("MyTLD", () => {
   const domain = ethers.encodeBytes32String("pro");
 
   let ens: ENSRegistry;
-  let myTLD: MyTLD;
+  let myTLD: CustomTLD;
   let owner: HardhatEthersSigner;
   let account1: HardhatEthersSigner;
 
@@ -17,7 +17,7 @@ describe("MyTLD", () => {
     [owner, account1] = await ethers.getSigners();
 
     ens = await ethers.deployContract("ENSRegistry");
-    myTLD = await ethers.deployContract("MyTLD", [tld, ens.target]);
+    myTLD = await ethers.deployContract("CustomTLD", [tld, ens.target]);
 
     await ens.setOwner(zero, myTLD.target);
     await myTLD.registerTLD();

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-interface IMyTLD {
+interface ICustomTLD {
     event TLDRegistered();
 
     event DomainRegistered(bytes32 _domain, address indexed _owner);

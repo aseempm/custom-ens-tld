@@ -8,7 +8,7 @@ async function main() {
   await ens.waitForDeployment();
   console.log("ENS", ens.target);
 
-  const myTLD = await ethers.deployContract("MyTLD", [tld, ens.target]);
+  const myTLD = await ethers.deployContract("CustomTLD", [tld, ens.target]);
   await myTLD.waitForDeployment();
   console.log("TLD", myTLD.target);
 

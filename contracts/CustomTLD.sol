@@ -2,11 +2,11 @@
 pragma solidity ^0.8.24;
 
 import "@ensdomains/ens-contracts/contracts/registry/ENS.sol";
-import "./IMyTLD.sol";
+import "./ICustomTLD.sol";
 import "./AddressResolver.sol";
 import "./ReverseResolver.sol";
 
-contract MyTLD is IMyTLD {
+contract CustomTLD is ICustomTLD {
     ENS public ens;
     bytes32 public rootNode;
     AddressResolver public addressResolver;
