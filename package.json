@@ -17,6 +17,8 @@
     "hardhat": "^2.21.0"
   },
   "dependencies": {
-    "@ensdomains/ens-contracts": "^1.1.4"
+    "@ensdomains/ens-contracts": "^1.1.4",
+    "@ensdomains/ensjs": "^3.4.4",
+    "viem": "^2.7.22"
   }
 }
