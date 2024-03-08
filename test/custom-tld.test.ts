@@ -12,6 +12,7 @@ import {
 describe("Custom TLD", () => {
   let deployer: HardhatEthersSigner;
   let domainOwner: HardhatEthersSigner;
+  let secondOnwer: HardhatEthersSigner;
 
   let root: Root;
   let registry: ENSRegistry;
@@ -22,7 +23,7 @@ describe("Custom TLD", () => {
     const TLD = namehash("aseem");
     const ZERO = ethers.encodeBytes32String("");
 
-    [deployer, domainOwner] = await ethers.getSigners();
+    [deployer, domainOwner, secondOnwer] = await ethers.getSigners();
 
     registry = await ethers.deployContract("ENSRegistry");
     root = await ethers.deployContract("Root", [registry.target]);
@@ -42,12 +43,11 @@ describe("Custom TLD", () => {
   });
 
   describe("Domain Registration", () => {
+    const domain = namehash("live.aseem");
+    const label = labelhash("live");
+
     it("should register domain as live.aseem", async () => {
-      const domain = namehash("live.aseem");
-      const label = labelhash("live");
-
       const txn = await registrar.register(label, domainOwner, 86400);
-
       const block = await ethers.provider.getBlock(txn.blockHash!);
 
       expect(await registry.owner(domain)).to.equal(domainOwner);
@@ -55,6 +55,25 @@ describe("Custom TLD", () => {
       expect(await registrar.nameExpires(label)).to.equal(
         block!.timestamp + 86400
       );
+    });
+
+    it("should not register same domain", async () => {
+      await expect(registrar.register(label, domainOwner, 86400)).to.be
+        .reverted;
+    });
+
+    it("should able to owner transfer the domain to new account", async () => {
+      await registrar
+        .connect(domainOwner)
+        .transferFrom(domainOwner, secondOnwer, label);
+
+      expect(await registrar.ownerOf(label)).to.equal(secondOnwer);
+
+      await registrar
+        .connect(secondOnwer)
+        .transferFrom(secondOnwer, domainOwner, label);
+
+      expect(await registrar.ownerOf(label)).to.equal(domainOwner);
     });
   });
 });
