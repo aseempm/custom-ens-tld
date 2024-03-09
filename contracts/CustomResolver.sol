@@ -4,17 +4,27 @@ pragma solidity ^0.8.24;
 import "./ENSRegistry.sol";
 import "@ensdomains/ens-contracts/contracts/resolvers/Resolver.sol";
 import "@ensdomains/ens-contracts/contracts/resolvers/profiles/AddrResolver.sol";
+import "@ensdomains/ens-contracts/contracts/resolvers/profiles/NameResolver.sol";
 
-contract CustomResolver is AddrResolver {
+contract CustomResolver is AddrResolver, NameResolver {
     ENS public ens;
+    address public reverseRegistrar;
 
-    constructor(ENS _ens) {
+    constructor(ENS _ens, address _reverseRegistrar) {
         ens = _ens;
+        reverseRegistrar = _reverseRegistrar;
     }
 
     function isAuthorised(
         bytes32 node
     ) internal view virtual override returns (bool) {
+        if (reverseRegistrar == msg.sender) return true;
         return ens.owner(node) == msg.sender;
+    }
+
+    function supportsInterface(
+        bytes4 interfaceID
+    ) public view override(AddrResolver, NameResolver) returns (bool) {
+        return super.supportsInterface(interfaceID);
     }
 }
