@@ -1,15 +1,17 @@
 import { ethers } from "hardhat";
-import { labelhash, namehash } from "viem";
+import { labelhash, namehash, zeroHash } from "viem";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import {
   BaseRegistrarImplementation,
+  CustomResolver,
   ENSRegistry,
-  OwnedResolver,
   Root,
 } from "../typechain-types";
 
 describe("Custom TLD", () => {
+  const NODE = namehash("aseem");
+
   let deployer: HardhatEthersSigner;
   let domainOwner: HardhatEthersSigner;
   let secondOnwer: HardhatEthersSigner;
@@ -17,23 +19,20 @@ describe("Custom TLD", () => {
   let root: Root;
   let registry: ENSRegistry;
   let registrar: BaseRegistrarImplementation;
-  let resolver: OwnedResolver;
+  let resolver: CustomResolver;
 
   before(async () => {
-    const TLD = namehash("aseem");
-    const ZERO = ethers.encodeBytes32String("");
-
     [deployer, domainOwner, secondOnwer] = await ethers.getSigners();
 
     registry = await ethers.deployContract("ENSRegistry");
     root = await ethers.deployContract("Root", [registry.target]);
     registrar = await ethers.deployContract("BaseRegistrarImplementation", [
       registry.target,
-      TLD,
+      NODE,
     ]);
-    resolver = await ethers.deployContract("OwnedResolver");
+    resolver = await ethers.deployContract("CustomResolver", [registry.target]);
 
-    await registry.setOwner(ZERO, root.target);
+    await registry.setOwner(zeroHash, root.target);
 
     await root.setController(deployer, true);
     await root.setSubnodeOwner(labelhash("aseem"), registrar);
@@ -74,6 +73,29 @@ describe("Custom TLD", () => {
         .transferFrom(secondOnwer, domainOwner, label);
 
       expect(await registrar.ownerOf(label)).to.equal(domainOwner);
+    });
+  });
+
+  describe("Address Resolver", () => {
+    it("should set address to domain by owner", async () => {
+      const domain = namehash("live.aseem");
+      await resolver
+        .connect(domainOwner)
+        ["setAddr(bytes32,address)"](domain, domainOwner);
+
+      const address = await registry.resolver(NODE);
+
+      const res = await ethers.getContractAt("Resolver", address);
+      expect(await res["addr(bytes32)"](domain)).to.equal(domainOwner);
+    });
+
+    it("should not set address to domain by other account", async () => {
+      const domain = namehash("live.aseem");
+      await expect(
+        resolver
+          .connect(secondOnwer)
+          ["setAddr(bytes32,address)"](domain, domainOwner)
+      ).to.be.reverted;
     });
   });
 });
