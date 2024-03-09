@@ -8,9 +8,10 @@ The project aims to create a Custom ENS Service with your TLD.
 The project consists of 4 contracts
 
 - **ENSRegistry**: holds the ENS data
-- **AddressResolver**: Resolves domain to address
-- **ReverseResolver**: Resolves address to domain
-- **CustomTLD**: Custom Contract to manage the TLD and ENS services
+- **Root**: controls the root node
+- **BaseRegistrar**: registrar for tld
+- **ReverseRegistrar**: registrar for reverse domain
+- **CustomResolver**: Resolves address and name
 
 ## Deploying Contracts
 1. Clone the repo. `git clone https://github.com/aseempm/custom-ens-tld.git`
