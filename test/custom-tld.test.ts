@@ -6,6 +6,7 @@ import {
   BaseRegistrarImplementation,
   CustomResolver,
   ENSRegistry,
+  ReverseRegistrar,
   Root,
 } from "../typechain-types";
 
@@ -20,6 +21,7 @@ describe("Custom TLD", () => {
   let registry: ENSRegistry;
   let registrar: BaseRegistrarImplementation;
   let resolver: CustomResolver;
+  let reverseRegistrar: ReverseRegistrar;
 
   before(async () => {
     [deployer, domainOwner, secondOnwer] = await ethers.getSigners();
@@ -30,12 +32,27 @@ describe("Custom TLD", () => {
       registry.target,
       NODE,
     ]);
-    resolver = await ethers.deployContract("CustomResolver", [registry.target]);
+    reverseRegistrar = await ethers.deployContract("ReverseRegistrar", [
+      registry.target,
+    ]);
+    resolver = await ethers.deployContract("CustomResolver", [
+      registry.target,
+      reverseRegistrar.target,
+    ]);
 
     await registry.setOwner(zeroHash, root.target);
 
     await root.setController(deployer, true);
     await root.setSubnodeOwner(labelhash("aseem"), registrar);
+    await root.setSubnodeOwner(labelhash("reverse"), deployer);
+
+    await registry.setSubnodeOwner(
+      namehash("reverse"),
+      labelhash("addr"),
+      reverseRegistrar.target
+    );
+
+    await reverseRegistrar.setDefaultResolver(resolver.target);
 
     await registrar.addController(deployer);
     await registrar.setResolver(resolver.target);
@@ -96,6 +113,16 @@ describe("Custom TLD", () => {
           .connect(secondOnwer)
           ["setAddr(bytes32,address)"](domain, domainOwner)
       ).to.be.reverted;
+    });
+  });
+
+  describe("Reverse Resolver", () => {
+    it("should resolve reverse address to domain", async () => {
+      const node = namehash(
+        domainOwner.address.slice(2).toLowerCase() + ".addr.reverse"
+      );
+      await reverseRegistrar.connect(domainOwner).setName("live");
+      expect(await resolver.name(node)).to.equal("live");
     });
   });
 });
