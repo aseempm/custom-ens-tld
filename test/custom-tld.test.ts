@@ -1,7 +1,7 @@
-import { ethers } from "hardhat";
-import { labelhash, namehash, zeroHash } from "viem";
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
+import { ethers } from "hardhat";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { labelhash, namehash, zeroHash } from "viem";
 import {
   BaseRegistrarImplementation,
   CustomResolver,
@@ -11,7 +11,8 @@ import {
 } from "../typechain-types";
 
 describe("Custom TLD", () => {
-  const NODE = namehash("aseem");
+  const TLD = "aseem";
+  const NODE = namehash(TLD);
 
   let deployer: HardhatEthersSigner;
   let domainOwner: HardhatEthersSigner;
@@ -43,7 +44,7 @@ describe("Custom TLD", () => {
     await registry.setOwner(zeroHash, root.target);
 
     await root.setController(deployer, true);
-    await root.setSubnodeOwner(labelhash("aseem"), registrar);
+    await root.setSubnodeOwner(labelhash(TLD), registrar);
     await root.setSubnodeOwner(labelhash("reverse"), deployer);
 
     await registry.setSubnodeOwner(
