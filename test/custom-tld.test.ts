@@ -2,12 +2,16 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { labelhash, namehash, zeroHash } from "viem";
+import { hexEncodeName } from "./utils/dns";
 import {
   BaseRegistrarImplementation,
   CustomResolver,
+  DNSRegistrar,
+  DNSSECImpl,
   ENSRegistry,
   ReverseRegistrar,
   Root,
+  SimplePublicSuffixList,
 } from "../typechain-types";
 
 describe("Custom TLD", () => {
@@ -124,6 +128,34 @@ describe("Custom TLD", () => {
       );
       await reverseRegistrar.connect(domainOwner).setName("live");
       expect(await resolver.name(node)).to.equal("live");
+    });
+  });
+
+  describe("DNS", () => {
+    let simplePublicSuffixList: SimplePublicSuffixList;
+    let dnssecImpl: DNSSECImpl;
+    let dnsRegistrar: DNSRegistrar;
+
+    before(async () => {
+      simplePublicSuffixList = await ethers.deployContract(
+        "SimplePublicSuffixList"
+      );
+
+      await simplePublicSuffixList.addPublicSuffixes([hexEncodeName(TLD)]);
+    });
+
+    describe("Public TLD", () => {
+      it("should succed on checking .aseem", async () => {
+        expect(
+          await simplePublicSuffixList.isPublicSuffix(hexEncodeName(TLD))
+        ).to.equal(true);
+      });
+
+      it("should fail on checking .abc", async () => {
+        expect(
+          await simplePublicSuffixList.isPublicSuffix(hexEncodeName("abc"))
+        ).to.equal(false);
+      });
     });
   });
 });
