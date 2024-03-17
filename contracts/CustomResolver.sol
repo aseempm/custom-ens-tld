@@ -5,8 +5,9 @@ import "./ENSRegistry.sol";
 import "@ensdomains/ens-contracts/contracts/resolvers/Resolver.sol";
 import "@ensdomains/ens-contracts/contracts/resolvers/profiles/AddrResolver.sol";
 import "@ensdomains/ens-contracts/contracts/resolvers/profiles/NameResolver.sol";
+import "@ensdomains/ens-contracts/contracts/resolvers/profiles/DNSResolver.sol";
 
-contract CustomResolver is AddrResolver, NameResolver {
+contract CustomResolver is AddrResolver, NameResolver, DNSResolver {
     ENS public ens;
     address public reverseRegistrar;
 
@@ -24,7 +25,12 @@ contract CustomResolver is AddrResolver, NameResolver {
 
     function supportsInterface(
         bytes4 interfaceID
-    ) public view override(AddrResolver, NameResolver) returns (bool) {
+    )
+        public
+        view
+        override(AddrResolver, NameResolver, DNSResolver)
+        returns (bool)
+    {
         return super.supportsInterface(interfaceID);
     }
 }

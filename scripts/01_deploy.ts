@@ -3,7 +3,9 @@ import { labelhash, namehash, zeroHash } from "viem";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const TLD = namehash("aseem");
+
+  const TLD = "aseem";
+  const NODE = namehash(TLD);
 
   const registry = await ethers.deployContract("ENSRegistry");
   await registry.waitForDeployment();
@@ -15,7 +17,7 @@ async function main() {
 
   const registrar = await ethers.deployContract("BaseRegistrarImplementation", [
     registry.target,
-    TLD,
+    NODE,
   ]);
   await registrar.waitForDeployment();
   console.log("Registrar", registrar.target);

@@ -1,17 +1,30 @@
-import { ethers } from "hardhat";
-import { labelhash, namehash, zeroHash } from "viem";
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
+import { ethers } from "hardhat";
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { labelhash, namehash, zeroAddress, zeroHash } from "viem";
+import {
+  getAnchor,
+  hexEncodeName,
+  hexEncodeSignedSet,
+  rootKeys,
+  testRrset,
+} from "./utils/dns";
 import {
   BaseRegistrarImplementation,
   CustomResolver,
+  DNSRegistrar,
+  DNSSECImpl,
+  DummyAlgorithm,
+  DummyDigest,
   ENSRegistry,
   ReverseRegistrar,
   Root,
+  SimplePublicSuffixList,
 } from "../typechain-types";
 
 describe("Custom TLD", () => {
-  const NODE = namehash("aseem");
+  const TLD = "aseem";
+  const NODE = namehash(TLD);
 
   let deployer: HardhatEthersSigner;
   let domainOwner: HardhatEthersSigner;
@@ -43,7 +56,7 @@ describe("Custom TLD", () => {
     await registry.setOwner(zeroHash, root.target);
 
     await root.setController(deployer, true);
-    await root.setSubnodeOwner(labelhash("aseem"), registrar);
+    await root.setSubnodeOwner(labelhash(TLD), registrar);
     await root.setSubnodeOwner(labelhash("reverse"), deployer);
 
     await registry.setSubnodeOwner(
@@ -58,7 +71,7 @@ describe("Custom TLD", () => {
     await registrar.setResolver(resolver.target);
   });
 
-  describe("Domain Registration", () => {
+  describe("Domain Registrar", () => {
     const domain = namehash("live.aseem");
     const label = labelhash("live");
 
@@ -123,6 +136,117 @@ describe("Custom TLD", () => {
       );
       await reverseRegistrar.connect(domainOwner).setName("live");
       expect(await resolver.name(node)).to.equal("live");
+    });
+  });
+
+  describe("DNS", () => {
+    let suffixes: SimplePublicSuffixList;
+    let dummyAlgo: DummyAlgorithm;
+    let dummyDig: DummyDigest;
+    let dnssecImpl: DNSSECImpl;
+    let dnsRegistrar: DNSRegistrar;
+
+    before(async () => {
+      suffixes = await ethers.deployContract("SimplePublicSuffixList");
+      await suffixes.addPublicSuffixes([hexEncodeName(TLD)]);
+
+      dnssecImpl = await ethers.deployContract("DNSSECImpl", [getAnchor()]);
+      dummyAlgo = await ethers.deployContract("DummyAlgorithm");
+      dummyDig = await ethers.deployContract("DummyDigest");
+
+      await dnssecImpl.setAlgorithm(253, dummyAlgo.target);
+      await dnssecImpl.setDigest(253, dummyDig.target);
+
+      dnsRegistrar = await ethers.deployContract("DNSRegistrar", [
+        zeroAddress,
+        zeroAddress,
+        dnssecImpl.target,
+        suffixes.target,
+        registry.target,
+      ]);
+
+      await root.setSubnodeOwner(labelhash(TLD), dnsRegistrar.target);
+    });
+
+    describe("Public Suffix List", () => {
+      it("should succed on checking .aseem", async () => {
+        expect(await suffixes.isPublicSuffix(hexEncodeName(TLD))).to.equal(
+          true
+        );
+      });
+
+      it("should fail on checking .abc", async () => {
+        expect(await suffixes.isPublicSuffix(hexEncodeName("abc"))).to.equal(
+          false
+        );
+      });
+    });
+
+    describe("DNSSEC Impl", async () => {
+      it("should retrive the configured anchor", async () => {
+        expect(await dnssecImpl.anchors()).to.equal(getAnchor());
+      });
+
+      it("should retrive the configured algorithm and digest", async () => {
+        expect(await dnssecImpl.algorithms(253)).to.equal(dummyAlgo.target);
+        expect(await dnssecImpl.digests(253)).to.equal(dummyDig.target);
+      });
+    });
+
+    describe("DNS Registrar", () => {
+      const validityPeriod = 2419200;
+      const expiration = Date.now() / 1000 - 15 * 60 + validityPeriod;
+      const inception = Date.now() / 1000 - 15 * 60;
+
+      it("should claim dns by proof", async () => {
+        const proof = [
+          hexEncodeSignedSet(rootKeys(expiration, inception)),
+          hexEncodeSignedSet(
+            testRrset("live.aseem", domainOwner.address, expiration, inception)
+          ),
+        ];
+        await dnsRegistrar
+          .connect(domainOwner)
+          .proveAndClaim(hexEncodeName("live.aseem"), proof);
+
+        expect(await registry.owner(namehash("live.aseem"))).to.equal(
+          domainOwner.address
+        );
+      });
+
+      it("should not takeover dns by false proof", async () => {
+        const test1Proof = [
+          hexEncodeSignedSet(rootKeys(expiration, inception)),
+          hexEncodeSignedSet(
+            testRrset("test1.aseem", domainOwner.address, expiration, inception)
+          ),
+        ];
+
+        expect(await registry.owner(namehash("test1.aseem"))).to.equal(
+          zeroAddress
+        );
+
+        await dnsRegistrar
+          .connect(domainOwner)
+          .proveAndClaim(hexEncodeName("test1.aseem"), test1Proof);
+
+        expect(await registry.owner(namehash("test1.aseem"))).to.equal(
+          domainOwner
+        );
+
+        const test2Proof = [
+          hexEncodeSignedSet(rootKeys(expiration, inception)),
+          hexEncodeSignedSet(
+            testRrset("test2.aseem", secondOnwer.address, expiration, inception)
+          ),
+        ];
+
+        await expect(
+          dnsRegistrar
+            .connect(domainOwner)
+            .proveAndClaim(hexEncodeName("test1.aseem"), test2Proof)
+        ).to.be.revertedWithCustomError(dnsRegistrar, "NoOwnerRecordFound");
+      });
     });
   });
 });
