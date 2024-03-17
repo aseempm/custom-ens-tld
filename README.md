@@ -5,13 +5,18 @@ The project aims to create a Custom ENS Service with your TLD.
 - NodeJs
 
 ## Contracts
-The project consists of 4 contracts
+The project consists of 10 contracts
 
 - **ENSRegistry**: holds the ENS data
 - **Root**: controls the root node
 - **BaseRegistrar**: registrar for tld
 - **ReverseRegistrar**: registrar for reverse domain
 - **CustomResolver**: Resolves address and name
+- **DummyAlgorithm**: dummy algo which alway return true (for simple implementation)
+- **DummyDigest**: dummy digest which alway return true (for simple implementation)
+- **SimplePublicSuffixList**: adding the tld suffix
+- **DNSSECImpl**: validating the DNSSEC
+- **DNSRegistrar**: prove and claming dns
 
 ## Deploying Contracts
 1. Clone the repo. `git clone https://github.com/aseempm/custom-ens-tld.git`
