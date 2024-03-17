@@ -165,7 +165,6 @@ describe("Custom TLD", () => {
         registry.target,
       ]);
 
-      // await root.setController(dnsRegistrar.target, true);
       await root.setSubnodeOwner(labelhash(TLD), dnsRegistrar.target);
     });
 
@@ -187,7 +186,8 @@ describe("Custom TLD", () => {
       const validityPeriod = 2419200;
       const expiration = Date.now() / 1000 - 15 * 60 + validityPeriod;
       const inception = Date.now() / 1000 - 15 * 60;
-      it("should claim live.aseem by domain owner", async () => {
+
+      it("should claim domain by proof", async () => {
         const proof = [
           hexEncodeSignedSet(rootKeys(expiration, inception)),
           hexEncodeSignedSet(
@@ -201,6 +201,40 @@ describe("Custom TLD", () => {
         expect(await registry.owner(namehash("live.aseem"))).to.equal(
           domainOwner.address
         );
+      });
+
+      it("should not takeover domain by false proof", async () => {
+        const test1Proof = [
+          hexEncodeSignedSet(rootKeys(expiration, inception)),
+          hexEncodeSignedSet(
+            testRrset("test1.aseem", domainOwner.address, expiration, inception)
+          ),
+        ];
+
+        expect(await registry.owner(namehash("test1.aseem"))).to.equal(
+          zeroAddress
+        );
+
+        await dnsRegistrar
+          .connect(domainOwner)
+          .proveAndClaim(hexEncodeName("test1.aseem"), test1Proof);
+
+        expect(await registry.owner(namehash("test1.aseem"))).to.equal(
+          domainOwner
+        );
+
+        const test2Proof = [
+          hexEncodeSignedSet(rootKeys(expiration, inception)),
+          hexEncodeSignedSet(
+            testRrset("test2.aseem", secondOnwer.address, expiration, inception)
+          ),
+        ];
+
+        await expect(
+          dnsRegistrar
+            .connect(domainOwner)
+            .proveAndClaim(hexEncodeName("test1.aseem"), test2Proof)
+        ).to.be.revertedWithCustomError(dnsRegistrar, "NoOwnerRecordFound");
       });
     });
   });
