@@ -71,7 +71,7 @@ describe("Custom TLD", () => {
     await registrar.setResolver(resolver.target);
   });
 
-  describe("Domain Registration", () => {
+  describe("Domain Registrar", () => {
     const domain = namehash("live.aseem");
     const label = labelhash("live");
 
@@ -168,7 +168,7 @@ describe("Custom TLD", () => {
       await root.setSubnodeOwner(labelhash(TLD), dnsRegistrar.target);
     });
 
-    describe("Public TLD", () => {
+    describe("Public Suffix List", () => {
       it("should succed on checking .aseem", async () => {
         expect(await suffixes.isPublicSuffix(hexEncodeName(TLD))).to.equal(
           true
@@ -182,7 +182,7 @@ describe("Custom TLD", () => {
       });
     });
 
-    describe("DNS Registration", () => {
+    describe("DNS Registrar", () => {
       const validityPeriod = 2419200;
       const expiration = Date.now() / 1000 - 15 * 60 + validityPeriod;
       const inception = Date.now() / 1000 - 15 * 60;
