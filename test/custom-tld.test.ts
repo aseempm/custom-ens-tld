@@ -182,12 +182,23 @@ describe("Custom TLD", () => {
       });
     });
 
+    describe("DNSSEC Impl", async () => {
+      it("should retrive the configured anchor", async () => {
+        expect(await dnssecImpl.anchors()).to.equal(getAnchor());
+      });
+
+      it("should retrive the configured algorithm and digest", async () => {
+        expect(await dnssecImpl.algorithms(253)).to.equal(dummyAlgo.target);
+        expect(await dnssecImpl.digests(253)).to.equal(dummyDig.target);
+      });
+    });
+
     describe("DNS Registrar", () => {
       const validityPeriod = 2419200;
       const expiration = Date.now() / 1000 - 15 * 60 + validityPeriod;
       const inception = Date.now() / 1000 - 15 * 60;
 
-      it("should claim domain by proof", async () => {
+      it("should claim dns by proof", async () => {
         const proof = [
           hexEncodeSignedSet(rootKeys(expiration, inception)),
           hexEncodeSignedSet(
@@ -203,7 +214,7 @@ describe("Custom TLD", () => {
         );
       });
 
-      it("should not takeover domain by false proof", async () => {
+      it("should not takeover dns by false proof", async () => {
         const test1Proof = [
           hexEncodeSignedSet(rootKeys(expiration, inception)),
           hexEncodeSignedSet(
